@@ -3,11 +3,11 @@
 package com.example.linebot.presentation;
 
 import com.example.linebot.presentation.replier.Follow;
-import com.example.linebot.presentation.replier.Parrot; // Parrotの正しいパッケージ
-// import com.example.linebot.presentation.replier.Replier; // Replierインターフェースを直接使わない場合は削除可能
-
-import com.example.linebot.service.JankenResult; // JankenResultをimport
-import com.example.linebot.service.JankenService; // JankenServiceをimport
+import com.example.linebot.presentation.replier.ImageSizeReply;
+import com.example.linebot.presentation.replier.JankenReply; // ← 新しくimport
+import com.example.linebot.presentation.replier.Parrot;
+import com.example.linebot.service.JankenResult;
+import com.example.linebot.service.JankenService;
 import com.linecorp.bot.messaging.model.Message;
 import com.linecorp.bot.messaging.model.TextMessage;
 import com.linecorp.bot.spring.boot.handler.annotation.EventMapping;
@@ -36,14 +36,13 @@ public class Callback {
     // フォローイベントに対応する
     @EventMapping
     public Message handleFollow(FollowEvent event) {
-        // 実際はこのタイミングでフォロワーのユーザIDをデータベースに格納しておくなど
         Follow follow = new Follow(event);
         return follow.reply();
     }
 
     // 文章や画像などのメッセージイベントに対応する
     @EventMapping
-    public List<Message> handleMessage(MessageEvent event) throws Exception { // throws Exception は必須
+    public List<Message> handleMessage(MessageEvent event) throws Exception {
         MessageContent mc = event.message();
         switch (mc) {
             case TextMessageContent tmc:
@@ -58,8 +57,13 @@ public class Callback {
     public List<Message> handleJanken(ImageMessageContent imc) throws Exception {
         JankenResult jankenResult = jankenService.doJanken(imc);
 
-        // JankenResultの内容を文字列化して返信するよう修正
-        return List.of(new TextMessage(jankenResult.toString()));
+        // ★★★★★★★★★★★ 修正箇所 ★★★★★★★★★★★
+        // 2つの返信メッセージをリストにして返す
+        return List.of(
+                new ImageSizeReply(jankenResult).reply(),
+                new JankenReply(jankenResult).reply()
+        );
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     }
 
     public List<Message> handleText(TextMessageContent tmc) {
