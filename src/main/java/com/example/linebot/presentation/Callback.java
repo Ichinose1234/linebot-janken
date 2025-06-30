@@ -4,10 +4,13 @@ package com.example.linebot.presentation;
 
 import com.example.linebot.presentation.replier.Follow;
 import com.example.linebot.presentation.replier.ImageSizeReply;
-import com.example.linebot.presentation.replier.JankenReply; // ← 新しくimport
+import com.example.linebot.presentation.replier.JankenReply;
 import com.example.linebot.presentation.replier.Parrot;
+import com.example.linebot.presentation.replier.SenrekiReply;
 import com.example.linebot.service.JankenResult;
 import com.example.linebot.service.JankenService;
+import com.example.linebot.service.Senreki;
+import com.example.linebot.service.SenrekiService;
 import com.linecorp.bot.messaging.model.Message;
 import com.linecorp.bot.messaging.model.TextMessage;
 import com.linecorp.bot.spring.boot.handler.annotation.EventMapping;
@@ -28,9 +31,12 @@ public class Callback {
     private static final Logger log = LoggerFactory.getLogger(Callback.class);
 
     private final JankenService jankenService;
+    private final SenrekiService senrekiService; // ← SenrekiServiceを注入するフィールドを追加
 
-    public Callback(JankenService jankenService) {
+    // コンストラクタを修正し、SenrekiServiceも受け取るようにする
+    public Callback(JankenService jankenService, SenrekiService senrekiService) {
         this.jankenService = jankenService;
+        this.senrekiService = senrekiService;
     }
 
     // フォローイベントに対応する
@@ -56,21 +62,22 @@ public class Callback {
 
     public List<Message> handleJanken(ImageMessageContent imc) throws Exception {
         JankenResult jankenResult = jankenService.doJanken(imc);
-
-        // ★★★★★★★★★★★ 修正箇所 ★★★★★★★★★★★
-        // 2つの返信メッセージをリストにして返す
         return List.of(
                 new ImageSizeReply(jankenResult).reply(),
                 new JankenReply(jankenResult).reply()
         );
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     }
 
     public List<Message> handleText(TextMessageContent tmc) {
         String text = tmc.text();
         switch (text) {
+
             case "戦歴":
-                // 何もせずに default に進む
+                // SenrekiServiceを使って戦歴を計算する
+                Senreki senreki = senrekiService.calcSenreki();
+                // SenrekiReplyを使って返信メッセージを作成する
+                return List.of(new SenrekiReply(senreki).reply());
+
             default:
                 // おうむ返しのメッセージを作る
                 Parrot parrot = new Parrot(text);
