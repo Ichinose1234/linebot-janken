@@ -5,14 +5,15 @@ package com.example.linebot.presentation;
 import com.example.linebot.presentation.replier.Follow;
 import com.example.linebot.presentation.replier.ImageSizeReply;
 import com.example.linebot.presentation.replier.JankenReply;
-import com.example.linebot.presentation.replier.Parrot;
 import com.example.linebot.presentation.replier.SenrekiReply;
+import com.example.linebot.presentation.replier.SentimentReply; // ★ import文を追加
 import com.example.linebot.service.JankenResult;
 import com.example.linebot.service.JankenService;
 import com.example.linebot.service.Senreki;
 import com.example.linebot.service.SenrekiService;
+import com.example.linebot.service.SentimentResponse;
+import com.example.linebot.service.SentimentService;
 import com.linecorp.bot.messaging.model.Message;
-import com.linecorp.bot.messaging.model.TextMessage;
 import com.linecorp.bot.spring.boot.handler.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.handler.annotation.LineMessageHandler;
 import com.linecorp.bot.webhook.model.FollowEvent;
@@ -31,12 +32,14 @@ public class Callback {
     private static final Logger log = LoggerFactory.getLogger(Callback.class);
 
     private final JankenService jankenService;
-    private final SenrekiService senrekiService; // ← SenrekiServiceを注入するフィールドを追加
+    private final SenrekiService senrekiService;
+    private final SentimentService sentimentService;
 
-    // コンストラクタを修正し、SenrekiServiceも受け取るようにする
-    public Callback(JankenService jankenService, SenrekiService senrekiService) {
+    // コンストラクタを修正し、3つのServiceを受け取るようにする
+    public Callback(JankenService jankenService, SenrekiService senrekiService, SentimentService sentimentService) {
         this.jankenService = jankenService;
         this.senrekiService = senrekiService;
+        this.sentimentService = sentimentService;
     }
 
     // フォローイベントに対応する
@@ -79,9 +82,12 @@ public class Callback {
                 return List.of(new SenrekiReply(senreki).reply());
 
             default:
-                // おうむ返しのメッセージを作る
-                Parrot parrot = new Parrot(text);
-                return List.of(parrot.reply());
+                // ★ ここから修正
+                // 感情分析APIを呼び出す
+                SentimentResponse response = sentimentService.doAnalyze(text);
+                // 新しいSentimentReplyクラスを使って返信する
+                return List.of(new SentimentReply(response).reply());
+            // ★ ここまで修正
         }
     }
 }
